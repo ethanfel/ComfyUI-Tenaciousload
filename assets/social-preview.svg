@@ -1,0 +1,65 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ComfyUI-Tenaciousload — fast page loads for massive model and LoRA libraries">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b0b0f"/>
+      <stop offset="1" stop-color="#17171f"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#60a5fa"/>
+      <stop offset="0.55" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#ff9cf9"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#bae6fd"/>
+      <stop offset="1" stop-color="#60a5fa"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#60a5fa" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#60a5fa" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <rect x="14" y="14" width="1252" height="612" rx="28" fill="none" stroke="#27272a" stroke-width="2"/>
+
+  <!-- glow + faint bolt watermark -->
+  <circle cx="640" cy="150" r="220" fill="url(#glow)"/>
+  <g transform="translate(1015,330) scale(6.2)" opacity="0.05"><path d="M68 20 L42 66 L60 66 L50 102 L86 52 L64 52 Z" fill="#60a5fa"/></g>
+
+  <!-- icon badge -->
+  <g transform="translate(565,66)">
+    <rect width="150" height="150" rx="38" fill="#111118" stroke="url(#accent)" stroke-width="3"/>
+    <g transform="scale(1.25)"><path d="M68 20 L42 66 L60 66 L50 102 L86 52 L64 52 Z" fill="url(#bolt)" filter="url(#soft)"/></g>
+  </g>
+
+  <!-- wordmark -->
+  <text x="640" y="300" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="24" letter-spacing="11" font-weight="600" fill="#71717a" text-anchor="middle">C O M F Y U I</text>
+  <text x="640" y="392" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="92" font-weight="800" fill="url(#accent)" text-anchor="middle">Tenaciousload</text>
+  <rect x="540" y="412" width="200" height="4" rx="2" fill="url(#accent)" opacity="0.7"/>
+  <text x="640" y="456" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="27" fill="#a1a1aa" text-anchor="middle">Fast page loads for massive model &amp; LoRA libraries.</text>
+
+  <!-- minutes -> seconds pills -->
+  <g font-family="Consolas, ui-monospace, monospace" font-size="19" font-weight="600">
+    <rect x="412" y="490" width="244" height="42" rx="21" fill="#1f1216" stroke="#7f1d1d" stroke-width="1.5"/>
+    <text x="534" y="517" fill="#fca5a5" text-anchor="middle">black screen · minutes</text>
+    <text x="678" y="520" font-size="26" fill="#52525b" text-anchor="middle">→</text>
+    <rect x="700" y="490" width="220" height="42" rx="21" fill="#0d1a13" stroke="#166534" stroke-width="1.5"/>
+    <text x="810" y="517" fill="#86efac" text-anchor="middle">loads in seconds</text>
+  </g>
+
+  <!-- feature chips -->
+  <g font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="16" fill="#d4d4d8">
+    <rect x="320" y="560" width="168" height="34" rx="17" fill="#161620" stroke="#3f3f46" stroke-width="1.2"/>
+    <text x="404" y="582" text-anchor="middle">in-process cache</text>
+    <rect x="502" y="560" width="150" height="34" rx="17" fill="#161620" stroke="#3f3f46" stroke-width="1.2"/>
+    <text x="577" y="582" text-anchor="middle">disk-persisted</text>
+    <rect x="666" y="560" width="158" height="34" rx="17" fill="#161620" stroke="#3f3f46" stroke-width="1.2"/>
+    <text x="745" y="582" text-anchor="middle">1-click refresh</text>
+    <rect x="838" y="560" width="122" height="34" rx="17" fill="#161620" stroke="#3f3f46" stroke-width="1.2"/>
+    <text x="899" y="582" text-anchor="middle">zero deps</text>
+  </g>
+</svg>
