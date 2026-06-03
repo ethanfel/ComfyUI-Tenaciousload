@@ -35,10 +35,10 @@
 
   <!-- speed pills: before vs after -->
   <g transform="translate(208,206)" font-family="Consolas, ui-monospace, monospace" font-size="15" font-weight="600">
-    <rect width="156" height="34" rx="17" fill="#1f1216" stroke="#7f1d1d" stroke-width="1.5"/>
-    <text x="20" y="22" fill="#fca5a5">cold build 234 s</text>
-    <text x="176" y="24" font-size="20" fill="#52525b">→</text>
-    <rect x="206" width="150" height="34" rx="17" fill="#0d1a13" stroke="#166534" stroke-width="1.5"/>
-    <text x="226" y="22" fill="#86efac">cached 4 ms</text>
+    <rect width="186" height="34" rx="17" fill="#1f1216" stroke="#7f1d1d" stroke-width="1.5"/>
+    <text x="93" y="22" fill="#fca5a5" text-anchor="middle">cold build 234 s</text>
+    <text x="209" y="24" font-size="20" fill="#52525b" text-anchor="middle">→</text>
+    <rect x="232" width="152" height="34" rx="17" fill="#0d1a13" stroke="#166534" stroke-width="1.5"/>
+    <text x="308" y="22" fill="#86efac" text-anchor="middle">cached 4 ms</text>
   </g>
 </svg>
