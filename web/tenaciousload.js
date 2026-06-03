@@ -13,21 +13,38 @@ function notify(severity, detail, life = 6000) {
     console[severity === "error" ? "error" : "log"]("[Tenaciousload]", detail);
 }
 
-async function doRefresh() {
+async function runRefresh(mode, extra) {
     if (busy) {
         notify("warn", "A refresh is already running…");
         return;
     }
     busy = true;
-    notify("info", "Refreshing models/LoRAs — scanning over the network, this can take a few minutes…", 10000);
+    const label =
+        mode === "quick" ? "Quick refresh (changed folders)" :
+        mode === "register" ? "Registering file(s)" : "Full refresh (rescan all)";
+    notify("info", `${label} — rebuilding model lists… this can take a moment.`, 10000);
     try {
-        // 1) clear ComfyUI's folder cache + drop the object_info cache.
-        await api.fetchApi("/tenaciousload/refresh", { method: "POST" });
-        // 2) force a fresh object_info build and re-cache it (this is the slow step).
+        // 1) run the chosen refresh mode on the server
+        const res = await api.fetchApi("/tenaciousload/refresh", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode, ...(extra || {}) }),
+        });
+        const data = await res.json().catch(() => ({}));
+        // 2) rebuild + re-cache object_info (the slow build, if any)
         await api.fetchApi("/object_info?nocache=1").then((r) => r.arrayBuffer());
-        // 3) update open node dropdowns live if the frontend supports it.
+        // 3) update open dropdowns live if supported
         try { await app.refreshComboInNodes?.(); } catch (e) { /* non-fatal */ }
-        notify("success", "Done — new models are now available (reload the page if a dropdown still looks stale).", 8000);
+
+        let detail = "Done — new models are available (reload the page if a dropdown still looks stale).";
+        if (mode === "register") {
+            detail = `Registered ${data.added || 0} file(s)` +
+                (data.skipped ? `, ${data.skipped} not found on disk` : "") + ". " + detail;
+        } else if (mode === "quick") {
+            const dirs = (data.folders || []).reduce((a, f) => a + (f.scanned || 0), 0);
+            detail = `Quick scan: ${dirs} folder(s) rescanned. ` + detail;
+        }
+        notify("success", detail, 8000);
     } catch (e) {
         notify("error", "Refresh failed: " + (e?.message || e), 10000);
     } finally {
@@ -35,21 +52,45 @@ async function doRefresh() {
     }
 }
 
+async function doRegister() {
+    const folder = (prompt("Model folder type (loras, checkpoints, vae, …):", "loras") || "").trim();
+    if (!folder) return;
+    const raw = prompt(
+        `New file path(s) relative to the '${folder}' folder\n(comma- or newline-separated, e.g. mypack/newlora.safetensors):`,
+        "",
+    );
+    if (!raw) return;
+    const files = raw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+    if (!files.length) return;
+    await runRefresh("register", { folder, files });
+}
+
 app.registerExtension({
     name: "Tenaciousload.Refresh",
     commands: [
         {
-            id: "Tenaciousload.refresh",
-            label: "🔄 Refresh Models / LoRAs",
+            id: "Tenaciousload.quick",
+            label: "⚡ Quick refresh (changed folders)",
+            icon: "pi pi-bolt",
+            function: () => runRefresh("quick"),
+        },
+        {
+            id: "Tenaciousload.full",
+            label: "🔄 Full refresh (rescan all models/LoRAs)",
             icon: "pi pi-refresh",
-            function: doRefresh,
+            function: () => runRefresh("full"),
+        },
+        {
+            id: "Tenaciousload.register",
+            label: "➕ Register new model file…",
+            icon: "pi pi-plus",
+            function: doRegister,
         },
     ],
-    // Adds the command under the top "Extensions" menu (and the command palette).
     menuCommands: [
         {
             path: ["Extensions"],
-            commands: ["Tenaciousload.refresh"],
+            commands: ["Tenaciousload.quick", "Tenaciousload.full", "Tenaciousload.register"],
         },
     ],
 });

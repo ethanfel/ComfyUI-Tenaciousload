@@ -35,15 +35,28 @@ The only time a build runs is the first load after install, or when you
 explicitly refresh (below).
 
 ## Refreshing after you add / remove models or LoRAs
-The cache holds the old model lists until you refresh, so new files won't appear
-until you do one of:
+The cache holds the old model lists until you refresh. Three modes are available
+from the **`Extensions`** menu (and the command palette):
 
-- **Menu:** `Extensions ▸ 🔄 Refresh Models / LoRAs` (also in the command palette).
-- **Graph node:** `🔄 Refresh Models/LoRAs (Tenaciousload)` (for automated workflows).
-- **HTTP:** `POST /tenaciousload/refresh`, then `GET /object_info?nocache=1`.
+| Mode | What it does | Speed |
+|------|--------------|-------|
+| ⚡ **Quick refresh** | Re-walks only the folders whose timestamp **changed** since the last scan; reuses the cache for the rest. Catches new / removed / renamed files. | Fast on local disks; **~2× faster** on a slow network mount (it still has to stat every folder to find which changed). |
+| 🔄 **Full refresh** | Clears ComfyUI's folder cache and re-walks **everything**. Catches moves/deletes anywhere. | Slowest (the original behaviour). |
+| ➕ **Register new file…** | You give it the path(s) of the file(s) you just added; it appends them to the cache with **no folder walk**. | Instant disk-wise — only the `object_info` rebuild remains. |
 
-A refresh re-walks your model folders (slow over a network mount, ~minutes) — the
-button shows a "refreshing…" toast meanwhile. Normal loads stay instant.
+Also available:
+- **Graph node** `🔄 Refresh Models/LoRAs (Tenaciousload)` with a `mode` widget
+  (`quick` / `full`), for automated workflows.
+- **HTTP:** `POST /tenaciousload/refresh` with
+  `{"mode": "quick" | "full" | "register", "folder": "loras", "files": ["pack/new.safetensors"]}`,
+  then `GET /object_info?nocache=1`.
+
+> The **first** Quick refresh after install builds a folder index (one full walk),
+> so it's as slow as a Full refresh that one time; every Quick refresh after that
+> is incremental. The index is saved to `./cache/scan_snapshot.json`.
+
+Whichever mode you pick, the button shows a "refreshing…" toast and normal loads
+stay instant.
 
 ## Requirements
 **None to install.** Only ComfyUI itself (tested on 0.23.0) and Python ≥ 3.8.
