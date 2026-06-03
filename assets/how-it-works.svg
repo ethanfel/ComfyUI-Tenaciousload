@@ -1,0 +1,71 @@
+<svg width="880" height="300" viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="How ComfyUI-Tenaciousload works: browser requests are served from an in-process cache in milliseconds; the slow build only runs on a miss or refresh.">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b0b0f"/>
+      <stop offset="1" stop-color="#16161d"/>
+    </linearGradient>
+    <linearGradient id="acc2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+    <marker id="ah-blue" markerWidth="10" markerHeight="8" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#60a5fa"/>
+    </marker>
+    <marker id="ah-green" markerWidth="10" markerHeight="8" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#34d399"/>
+    </marker>
+    <marker id="ah-gray" markerWidth="10" markerHeight="8" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#71717a"/>
+    </marker>
+  </defs>
+
+  <rect x="2" y="2" width="876" height="296" rx="24" fill="url(#bg2)" stroke="#27272a" stroke-width="2"/>
+  <text x="40" y="48" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="#e4e4e7">How it works</text>
+
+  <!-- Browser -->
+  <g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+    <rect x="44" y="120" width="176" height="84" rx="16" fill="#111118" stroke="#3f3f46" stroke-width="2"/>
+    <text x="132" y="156" font-size="20" font-weight="700" fill="#e4e4e7" text-anchor="middle">Browser</text>
+    <text x="132" y="180" font-size="13" fill="#a1a1aa" text-anchor="middle">loads ComfyUI</text>
+  </g>
+
+  <!-- Tenaciousload cache (center) -->
+  <g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+    <rect x="350" y="100" width="204" height="124" rx="18" fill="#10131c" stroke="url(#acc2)" stroke-width="2.5"/>
+    <text x="452" y="134" font-size="19" font-weight="800" fill="#bfdbfe" text-anchor="middle">Tenaciousload</text>
+    <text x="452" y="156" font-size="13" fill="#a1a1aa" text-anchor="middle">in-process middleware</text>
+    <!-- disk/cache glyph -->
+    <g transform="translate(420,170)">
+      <ellipse cx="32" cy="6" rx="32" ry="9" fill="#1e293b" stroke="#60a5fa" stroke-width="1.5"/>
+      <path d="M0 6 V26 a32 9 0 0 0 64 0 V6" fill="#1e293b" stroke="#60a5fa" stroke-width="1.5"/>
+      <ellipse cx="32" cy="6" rx="32" ry="9" fill="#0f172a"/>
+      <ellipse cx="32" cy="6" rx="32" ry="9" fill="none" stroke="#60a5fa" stroke-width="1.5"/>
+    </g>
+    <text x="452" y="216" font-size="12" fill="#86efac" text-anchor="middle">memory + disk · survives restarts</text>
+  </g>
+
+  <!-- ComfyUI build (right) -->
+  <g font-family="Segoe UI, Helvetica, Arial, sans-serif">
+    <rect x="686" y="120" width="160" height="84" rx="16" fill="#111118" stroke="#3f3f46" stroke-width="2"/>
+    <text x="766" y="153" font-size="18" font-weight="700" fill="#e4e4e7" text-anchor="middle">ComfyUI</text>
+    <text x="766" y="176" font-size="12.5" fill="#a1a1aa" text-anchor="middle">builds object_info</text>
+  </g>
+
+  <!-- Browser -> cache (request) -->
+  <line x1="224" y1="138" x2="346" y2="138" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#ah-blue)"/>
+  <text x="285" y="129" font-family="Consolas, ui-monospace, monospace" font-size="12.5" fill="#93c5fd" text-anchor="middle">GET /object_info</text>
+
+  <!-- cache -> Browser (fast HIT) -->
+  <line x1="346" y1="186" x2="224" y2="186" stroke="#34d399" stroke-width="2.5" marker-end="url(#ah-green)"/>
+  <text x="285" y="204" font-family="Consolas, ui-monospace, monospace" font-size="12.5" font-weight="700" fill="#6ee7b7" text-anchor="middle">HIT · gzip · ~4 ms</text>
+
+  <!-- cache -> ComfyUI (miss/refresh, slow, dashed) -->
+  <line x1="558" y1="138" x2="682" y2="138" stroke="#71717a" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#ah-gray)"/>
+  <text x="620" y="129" font-family="Consolas, ui-monospace, monospace" font-size="12" fill="#a1a1aa" text-anchor="middle">miss / refresh</text>
+
+  <!-- ComfyUI -> cache (store) -->
+  <line x1="682" y1="186" x2="558" y2="186" stroke="#71717a" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#ah-gray)"/>
+  <text x="620" y="204" font-family="Consolas, ui-monospace, monospace" font-size="12" fill="#a1a1aa" text-anchor="middle">build once · store</text>
+
+  <text x="440" y="272" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13.5" fill="#71717a" text-anchor="middle">Normal loads never reach the build — the ~234 s build runs only on the first load or an explicit refresh.</text>
+</svg>

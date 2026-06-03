@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.svg" alt="ComfyUI-Tenaciousload" width="100%">
+</p>
+
 # ComfyUI-Tenaciousload
 
 Self-contained fix for slow / black-screen ComfyUI loading when you have a huge
@@ -11,6 +15,11 @@ build on every page load** — and the build **freezes ComfyUI's whole event
 loop**, so you get a long black screen, worst over a remote network.
 
 ## How this pack fixes it
+
+<p align="center">
+  <img src="assets/how-it-works.svg" alt="How it works: requests are served from an in-process cache in milliseconds; the slow build only runs on a miss or refresh" width="100%">
+</p>
+
 On load it injects an aiohttp **middleware** into ComfyUI that intercepts
 `/object_info` and `/api/object_info` and:
 
