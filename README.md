@@ -17,7 +17,7 @@ loop**, so you get a long black screen, worst over a remote network.
 ## How this pack fixes it
 
 <p align="center">
-  <img src="assets/how-it-works.svg" alt="How it works: requests are served from an in-process cache in milliseconds; the slow build only runs on a miss or refresh" width="100%">
+  <img src="assets/how-it-works.svg" alt="How it works: requests are served straight from an in-process cache; the slow build only runs on a miss or refresh" width="100%">
 </p>
 
 On load it injects an aiohttp **middleware** into ComfyUI that intercepts
