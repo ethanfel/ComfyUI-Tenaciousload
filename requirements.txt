@@ -1,0 +1,9 @@
+# ComfyUI-Tenaciousload has NO external dependencies.
+# Everything it uses is either the Python standard library
+# (os, gzip, json, logging, threading) or already provided by ComfyUI:
+#   - aiohttp  (ComfyUI's web server, aiohttp>=3.11.8)
+#   - folder_paths, server  (ComfyUI internal modules)
+#
+# Requirements to run:
+#   - ComfyUI (any recent version; tested on 0.23.0)
+#   - Python >= 3.8

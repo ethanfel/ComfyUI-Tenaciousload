@@ -1,0 +1,14 @@
+[project]
+name = "comfyui-tenaciousload"
+description = "Fast ComfyUI loading behind an nginx cache, with an in-UI button to refresh model/LoRA lists."
+version = "1.0.0"
+license = { text = "MIT" }
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/ethanfel/ComfyUI-Tenaciousload"
+
+[tool.comfy]
+PublisherId = "ethanfel"
+DisplayName = "Tenaciousload"
+Icon = ""
