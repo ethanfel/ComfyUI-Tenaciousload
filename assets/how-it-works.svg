@@ -57,7 +57,7 @@
 
   <!-- cache -> Browser (fast HIT) -->
   <line x1="346" y1="186" x2="224" y2="186" stroke="#34d399" stroke-width="2.5" marker-end="url(#ah-green)"/>
-  <text x="285" y="204" font-family="Consolas, ui-monospace, monospace" font-size="12.5" font-weight="700" fill="#6ee7b7" text-anchor="middle">HIT · gzip · ~4 ms</text>
+  <text x="285" y="204" font-family="Consolas, ui-monospace, monospace" font-size="12.5" font-weight="700" fill="#6ee7b7" text-anchor="middle">HIT · gzip · cached</text>
 
   <!-- cache -> ComfyUI (miss/refresh, slow, dashed) -->
   <line x1="558" y1="138" x2="682" y2="138" stroke="#71717a" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#ah-gray)"/>

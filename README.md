@@ -26,10 +26,10 @@ On load it injects an aiohttp **middleware** into ComfyUI that intercepts
 - **caches the built response in memory _and_ on disk** (`./cache/`), so it is
   built once instead of on every load — and the disk copy makes **restarts
   instant** (no rebuild);
-- **serves it gzipped in ~milliseconds** (≈85% smaller, independent of any CLI
-  flag);
-- serves from cache **without running the build**, so the event-loop freeze is
-  gone for normal loads.
+- **serves it gzipped** (≈85% smaller transfer, independent of any CLI flag),
+  straight from cache **without running the build**;
+- because the build never runs on a normal load, the event-loop freeze (and the
+  long black screen) is gone — page loads drop from **minutes to seconds**.
 
 The only time a build runs is the first load after install, or when you
 explicitly refresh (below).
@@ -70,6 +70,24 @@ curl -s -H 'Accept-Encoding: gzip' -o /dev/null \
 # expect after the first load: ~0.00Xs | ~10 MB | HIT | gzip
 ```
 ComfyUI's startup log should show `Tenaciousload: object_info cache middleware installed`.
+
+## Recommended: gzip the rest of ComfyUI
+This pack already gzips the cached `object_info` on its own. To **also** gzip
+everything else ComfyUI serves — most importantly the *hundreds* of frontend
+extension scripts, plus the other API responses — launch ComfyUI with its
+built-in compression flag:
+
+```bash
+python main.py --listen --port 8188 --enable-compress-response-body
+```
+
+- It's a **stock ComfyUI** option (defined in `comfy/cli_args.py`), not part of
+  this pack, and it's **optional** — Tenaciousload works fine without it.
+- It's strongly recommended for **remote access**: those extension scripts are
+  many small requests that compress very well, so the flag noticeably cuts the
+  total transfer on top of the `object_info` cache.
+- It costs a little CPU per response to compress; on a fast machine this is
+  negligible compared to the bytes saved over the network.
 
 ## Notes
 - The disk cache lives in `./cache/` (git-ignored). Delete it, or use the refresh
