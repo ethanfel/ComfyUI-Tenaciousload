@@ -108,5 +108,20 @@ python main.py --listen --port 8188 --enable-compress-response-body
 - An nginx reverse proxy can cache `object_info` at the HTTP layer too, but this
   pack does it in-process so no extra service, container, or port is needed.
 
+## Installing / updating other custom nodes
+This pack is a quiet neighbour:
+- **No dependencies** — its `requirements.txt` is empty, so it can't cause the
+  pip version conflicts that break other nodes' installs/updates. It also never
+  touches other nodes' files or the ComfyUI-Manager installer.
+- **Auto-detects node changes** — it fingerprints the installed node set
+  (`NODE_CLASS_MAPPINGS`) and, on the first page load after a restart, drops the
+  cache automatically if a node was **installed, updated, enabled or removed** —
+  so new nodes appear with no manual refresh.
+- The only thing it gates is the full `/object_info` list (a cached snapshot);
+  it passes every other request straight through, so other nodes' own routes,
+  sidebars and refresh buttons are unaffected. For an in-place node tweak that
+  changes an existing node's inputs *without* adding/removing a node class, use a
+  refresh button.
+
 ## License
 MIT — see [LICENSE](LICENSE).

@@ -26,6 +26,7 @@ import os
 import gzip
 import json
 import time
+import hashlib
 import logging
 import threading
 
@@ -45,6 +46,7 @@ _CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache")
 _RAW_PATH = os.path.join(_CACHE_DIR, "object_info.json")
 _GZ_PATH = os.path.join(_CACHE_DIR, "object_info.json.gz")
 _SNAP_PATH = os.path.join(_CACHE_DIR, "scan_snapshot.json")
+_SIG_PATH = os.path.join(_CACHE_DIR, "node_signature.txt")
 _OBJECT_INFO_PATHS = ("/object_info", "/api/object_info")
 _GZIP_LEVEL = 5
 
@@ -298,6 +300,51 @@ def register_files(folder_name, rel_paths):
 
 
 # --------------------------------------------------------------------------- #
+#  Auto-invalidate when installed nodes change (install / update / enable / remove)
+# --------------------------------------------------------------------------- #
+_sig_checked = False
+
+
+def _current_node_signature():
+    """A cheap fingerprint of the available node set. Changes when a node is
+    installed, removed, enabled or disabled."""
+    try:
+        import nodes
+        keys = sorted(nodes.NODE_CLASS_MAPPINGS.keys())
+    except Exception:
+        return None
+    h = hashlib.sha1()
+    for k in keys:
+        h.update(k.encode("utf-8", "replace"))
+        h.update(b"\x00")
+    return f"{len(keys)}:{h.hexdigest()}"
+
+
+def _check_node_signature():
+    """Drop the cached object_info if the node set changed since last run, so
+    newly installed/updated nodes show up without a manual refresh."""
+    global _sig_checked
+    _sig_checked = True
+    try:
+        cur = _current_node_signature()
+        if cur is None:
+            return
+        old = None
+        if os.path.exists(_SIG_PATH):
+            with open(_SIG_PATH) as f:
+                old = f.read().strip()
+        if old is not None and old != cur:
+            log.info("Tenaciousload: installed node set changed -> invalidating object_info cache")
+            invalidate_object_info_cache()
+        if old != cur:
+            os.makedirs(_CACHE_DIR, exist_ok=True)
+            with open(_SIG_PATH, "w") as f:
+                f.write(cur)
+    except Exception as e:  # pragma: no cover
+        log.warning("Tenaciousload: node signature check failed: %s", e)
+
+
+# --------------------------------------------------------------------------- #
 #  object_info caching middleware
 # --------------------------------------------------------------------------- #
 def _serve_cached(request):
@@ -324,6 +371,8 @@ async def _object_info_cache_mw(request, handler):
     global _disk_loaded
     if not _disk_loaded:
         _load_from_disk()
+    if not _sig_checked:
+        _check_node_signature()  # auto-drop cache if nodes were installed/updated
 
     if "nocache" not in request.query and _mem["raw"] is not None:
         return _serve_cached(request)
