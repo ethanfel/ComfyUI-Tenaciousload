@@ -6,8 +6,9 @@ model/LoRA collection (especially on a network mount).
 
 It injects an aiohttp middleware that caches the huge /api/object_info response
 in memory and on disk (survives restarts) and serves it gzipped, so the slow
-build (which freezes ComfyUI's event loop) runs only on the first load or an
-explicit refresh — not on every page load.
+build runs only on the first load or an explicit refresh — not on every page
+load. That build (and the refresh folder-walk) runs in a worker thread, so a
+slow/stalling network model mount no longer freezes ComfyUI's event loop.
 
 Three refresh modes are exposed (menu buttons, a graph node, and HTTP):
   * full     - clear ComfyUI's folder cache -> full re-walk of every model
@@ -26,6 +27,7 @@ import os
 import gzip
 import json
 import time
+import asyncio
 import hashlib
 import logging
 import threading
@@ -173,9 +175,17 @@ def _scan_root_incremental(root, old):
     """Walk a root, scandir-ing only dirs whose mtime changed; reuse the rest."""
     new = {}
     scanned = reused = 0
+    visited = set()  # real paths, to defend against symlink cycles on network mounts
     stack = [root]
     while stack:
         d = stack.pop()
+        try:
+            rp = os.path.realpath(d)
+        except OSError:
+            continue
+        if rp in visited:
+            continue
+        visited.add(rp)
         try:
             m = os.path.getmtime(d)
         except OSError:
@@ -345,6 +355,72 @@ def _check_node_signature():
 
 
 # --------------------------------------------------------------------------- #
+#  Off-loop object_info builder
+# --------------------------------------------------------------------------- #
+# Building object_info walks the model folders synchronously. On a slow/stalling
+# network mount that walk blocks ComfyUI's single event loop = the whole UI
+# hangs. We instead run the build in a worker thread: the folder-walk syscalls
+# release the GIL while they wait on the NAS, so the event loop stays responsive.
+_node_info_fn = None
+_node_info_resolved = False
+
+
+def _resolve_node_info_fn():
+    """Pull ComfyUI's own `node_info` closure off the /object_info route, so the
+    threaded build is byte-for-byte the same logic (no drift). Routes are added
+    after custom nodes load, so this is done lazily on first use."""
+    global _node_info_fn, _node_info_resolved
+    _node_info_resolved = True
+    try:
+        for route in PromptServer.instance.app.router.routes():
+            if route.method != "GET":
+                continue
+            path = getattr(route.resource, "canonical", None)
+            if path not in ("/object_info", "/api/object_info"):
+                continue
+            fn = getattr(route.handler, "__wrapped__", route.handler)
+            code = getattr(fn, "__code__", None)
+            if code and fn.__closure__:
+                for name, cell in zip(code.co_freevars, fn.__closure__):
+                    if name == "node_info" and callable(cell.cell_contents):
+                        _node_info_fn = cell.cell_contents
+                        log.info("Tenaciousload: threaded object_info build enabled")
+                        return
+    except Exception as e:  # pragma: no cover
+        log.warning("Tenaciousload: could not resolve node_info (%s); builds stay on the loop", e)
+
+
+def _build_object_info_bytes():
+    """Replicate ComfyUI's object_info build. Runs in a worker thread."""
+    import nodes
+    out = {}
+    with folder_paths.cache_helper:
+        for x in list(nodes.NODE_CLASS_MAPPINGS.keys()):
+            try:
+                out[x] = _node_info_fn(x)
+            except Exception:  # pragma: no cover
+                log.error("Tenaciousload: node_info failed for '%s'", x, exc_info=True)
+    return json.dumps(out).encode("utf-8")
+
+
+async def _build_object_info_off_loop():
+    """Build object_info in a thread; return raw bytes, or None to fall back."""
+    if _node_info_fn is None and not _node_info_resolved:
+        _resolve_node_info_fn()
+    if _node_info_fn is None:
+        return None
+    try:
+        loop = asyncio.get_event_loop()
+        raw = await loop.run_in_executor(None, _build_object_info_bytes)
+        if isinstance(raw, (bytes, bytearray)) and len(raw) > 1000:  # sanity: real one is huge
+            return bytes(raw)
+        log.warning("Tenaciousload: threaded build looked wrong (%d bytes); falling back", len(raw or b""))
+    except Exception as e:  # pragma: no cover
+        log.warning("Tenaciousload: threaded build failed (%s); falling back", e)
+    return None
+
+
+# --------------------------------------------------------------------------- #
 #  object_info caching middleware
 # --------------------------------------------------------------------------- #
 def _serve_cached(request):
@@ -375,6 +451,13 @@ async def _object_info_cache_mw(request, handler):
         _check_node_signature()  # auto-drop cache if nodes were installed/updated
 
     if "nocache" not in request.query and _mem["raw"] is not None:
+        return _serve_cached(request)
+
+    # MISS / refresh: build in a worker thread so a slow folder-walk does not
+    # freeze the event loop. Falls back to the normal in-loop handler.
+    raw = await _build_object_info_off_loop()
+    if raw is not None:
+        _store(raw)
         return _serve_cached(request)
 
     resp = await handler(request)
@@ -409,9 +492,11 @@ async def _refresh(request):
     except Exception:
         data = {}
     mode = (data.get("mode") or "full").lower()
+    loop = asyncio.get_event_loop()
 
     if mode == "quick":
-        summary = quick_rescan_all()
+        # run the folder walk off the loop so the UI stays responsive
+        summary = await loop.run_in_executor(None, quick_rescan_all)
         invalidate_object_info_cache()
         rescanned = sum(s["scanned"] for s in summary)
         log.info("Tenaciousload: quick refresh — %d folders touched, %d dirs rescanned", len(summary), rescanned)
@@ -420,7 +505,7 @@ async def _refresh(request):
     if mode == "register":
         folder = data.get("folder") or "loras"
         files = data.get("files") or []
-        result = register_files(folder, files)
+        result = await loop.run_in_executor(None, register_files, folder, files)
         invalidate_object_info_cache()
         log.info("Tenaciousload: register — %s", result)
         return web.json_response({"status": "ok", "mode": "register", **result})
