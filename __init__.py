@@ -362,7 +362,16 @@ def _current_node_signature():
     except Exception as e:  # pragma: no cover
         log.warning("Tenaciousload: custom_nodes code hash failed: %s", e)
         code = ""
-    return f"{len(keys)}:{h.hexdigest()}:{code}"
+    # input-dir mtime: LoadImage etc. list the input folder (non-recursively) in
+    # their INPUT_TYPES, so it rides along in object_info. The dir's own mtime
+    # changes when files are added/removed there, so a restart picks them up.
+    # (Cheap: one stat. Model folders are on a slow mount + nested, so they are
+    # NOT fingerprinted here — use a refresh button for new models.)
+    try:
+        inp = str(os.path.getmtime(folder_paths.get_input_directory()))
+    except Exception:
+        inp = ""
+    return f"{len(keys)}:{h.hexdigest()}:{code}:{inp}"
 
 
 def _check_node_signature():
