@@ -315,9 +315,39 @@ def register_files(folder_name, rel_paths):
 _sig_checked = False
 
 
+def _custom_nodes_code_hash():
+    """Hash of every custom-node .py path + mtime. Changes when a node's code is
+    updated in place (git pull / edit) even if its class names stay the same, so
+    feature updates to an existing node are detected. (custom_nodes is local, so
+    this walk is fast; __pycache__ is skipped so it has no false positives.)"""
+    try:
+        bases = folder_paths.get_folder_paths("custom_nodes")
+    except Exception:
+        bases = [os.path.join(getattr(folder_paths, "base_path", "."), "custom_nodes")]
+    skip = {"__pycache__", ".git", "node_modules", ".venv", "venv"}
+    items = []
+    for base in sorted(set(bases)):
+        if not os.path.isdir(base):
+            continue
+        for dirpath, dirnames, filenames in os.walk(base):
+            dirnames[:] = [d for d in dirnames if d not in skip]
+            for fn in filenames:
+                if fn.endswith(".py"):
+                    p = os.path.join(dirpath, fn)
+                    try:
+                        items.append((p, os.path.getmtime(p)))
+                    except OSError:
+                        pass
+    h = hashlib.sha1()
+    for p, mt in sorted(items):
+        h.update(p.encode("utf-8", "replace"))
+        h.update(f":{mt}\x00".encode())
+    return h.hexdigest()
+
+
 def _current_node_signature():
-    """A cheap fingerprint of the available node set. Changes when a node is
-    installed, removed, enabled or disabled."""
+    """Fingerprint of the available nodes AND their code. Changes when a node is
+    installed, removed, enabled, disabled, or updated in place."""
     try:
         import nodes
         keys = sorted(nodes.NODE_CLASS_MAPPINGS.keys())
@@ -327,7 +357,12 @@ def _current_node_signature():
     for k in keys:
         h.update(k.encode("utf-8", "replace"))
         h.update(b"\x00")
-    return f"{len(keys)}:{h.hexdigest()}"
+    try:
+        code = _custom_nodes_code_hash()
+    except Exception as e:  # pragma: no cover
+        log.warning("Tenaciousload: custom_nodes code hash failed: %s", e)
+        code = ""
+    return f"{len(keys)}:{h.hexdigest()}:{code}"
 
 
 def _check_node_signature():
