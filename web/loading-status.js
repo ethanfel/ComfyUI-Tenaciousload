@@ -71,12 +71,19 @@ async function tick() {
             : `first build / refresh · ${fmt(st.elapsed || 0)}`;
         bar.classList.add("indet");
         bar.style.width = "35%";
-    } else {
+    } else if (st && st.cached) {
+        // known fast path: serving the cached object_info
         msg.textContent = "Loading node definitions…";
-        sub.textContent = st && st.cached ? `from cache · ${mb(st.gz_bytes || st.cache_bytes || 0)} gzipped` : "";
+        sub.textContent = `from cache · ${mb(st.gz_bytes || st.cache_bytes || 0)} gzipped`;
         bar.classList.remove("indet");
         bar.style.left = "0";
         bar.style.width = "90%";
+    } else {
+        // disabled, or server busy/frozen building natively — show "working"
+        msg.textContent = "Loading node definitions…";
+        sub.textContent = "";
+        bar.classList.add("indet");
+        bar.style.width = "35%";
     }
 }
 

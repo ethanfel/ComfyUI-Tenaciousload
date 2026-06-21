@@ -140,5 +140,14 @@ This pack is a quiet neighbour:
   changes an existing node's inputs *without* adding/removing a node class, use a
   refresh button.
 
+## Disabling (keep only the loading bar)
+Set **`TENACIOUSLOAD_DISABLED=1`** (and restart) to turn the pack into a no-op:
+no caching middleware, no fingerprint, no refresh routes, no graph node — ComfyUI
+behaves exactly as if the pack weren't installed. The **loading-screen status
+bar stays** (it just shows a generic "Loading node definitions…" since there's no
+build to track). Useful for A/B comparing, or as a one-flag kill-switch if you
+ever suspect the cache. Remove the variable (or set it to `0`) and restart to
+re-enable.
+
 ## License
 MIT — see [LICENSE](LICENSE).

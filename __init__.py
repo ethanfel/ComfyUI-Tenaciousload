@@ -41,6 +41,12 @@ log = logging.getLogger("Tenaciousload")
 
 WEB_DIRECTORY = "./web"
 
+# Disabled mode: do NOTHING to ComfyUI (no caching middleware, no refresh routes,
+# no fingerprint, no graph node) — but still serve the loading-bar overlay.
+# Toggle with TENACIOUSLOAD_DISABLED=1. Requires a restart, since the middleware
+# is installed at startup.
+_DISABLED = os.environ.get("TENACIOUSLOAD_DISABLED", "").strip().lower() in ("1", "true", "yes", "on")
+
 # --------------------------------------------------------------------------- #
 #  object_info response cache (memory + disk)
 # --------------------------------------------------------------------------- #
@@ -551,7 +557,10 @@ def _install_middleware():
         log.error("Tenaciousload: could not install cache middleware (loads will be slow): %s", e)
 
 
-_install_middleware()
+if _DISABLED:
+    log.info("Tenaciousload: DISABLED — no middleware / caching / refresh (loading overlay only)")
+else:
+    _install_middleware()
 
 
 # --------------------------------------------------------------------------- #
@@ -560,6 +569,7 @@ _install_middleware()
 @PromptServer.instance.routes.get("/tenaciousload/status")
 async def _status(request):
     st = {
+        "enabled": not _DISABLED,
         "building": _build_state["building"],
         "done": _build_state["done"],
         "total": _build_state["total"],
@@ -573,7 +583,6 @@ async def _status(request):
     return web.json_response(st)
 
 
-@PromptServer.instance.routes.post("/tenaciousload/refresh")
 async def _refresh(request):
     try:
         data = await request.json()
@@ -603,6 +612,10 @@ async def _refresh(request):
     invalidate_object_info_cache()
     log.info("Tenaciousload: full refresh — folder cache cleared")
     return web.json_response({"status": "ok", "mode": "full"})
+
+
+if not _DISABLED:
+    PromptServer.instance.routes.post("/tenaciousload/refresh")(_refresh)
 
 
 # --------------------------------------------------------------------------- #
@@ -640,7 +653,7 @@ class TenaciousloadRefresh:
         return (trigger,)
 
 
-NODE_CLASS_MAPPINGS = {"TenaciousloadRefresh": TenaciousloadRefresh}
-NODE_DISPLAY_NAME_MAPPINGS = {"TenaciousloadRefresh": "🔄 Refresh Models/LoRAs (Tenaciousload)"}
+NODE_CLASS_MAPPINGS = {} if _DISABLED else {"TenaciousloadRefresh": TenaciousloadRefresh}
+NODE_DISPLAY_NAME_MAPPINGS = {} if _DISABLED else {"TenaciousloadRefresh": "🔄 Refresh Models/LoRAs (Tenaciousload)"}
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]

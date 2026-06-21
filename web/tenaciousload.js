@@ -65,7 +65,14 @@ async function doRegister() {
     await runRefresh("register", { folder, files });
 }
 
-app.registerExtension({
+// Skip the refresh buttons entirely when Tenaciousload is disabled.
+let _tlEnabled = true;
+try {
+    const r = await api.fetchApi("/tenaciousload/status");
+    if (r.ok) _tlEnabled = (await r.json()).enabled !== false;
+} catch (e) { /* assume enabled */ }
+
+if (_tlEnabled) app.registerExtension({
     name: "Tenaciousload.Refresh",
     commands: [
         {
