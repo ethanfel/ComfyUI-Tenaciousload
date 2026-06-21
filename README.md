@@ -107,6 +107,13 @@ python main.py --listen --port 8188 --enable-compress-response-body
   button, to force a rebuild.
 - An nginx reverse proxy can cache `object_info` at the HTTP layer too, but this
   pack does it in-process so no extra service, container, or port is needed.
+- **New files in the `input` folder** are picked up by a **refresh button** by
+  default (same as new models) — they do *not* trigger an automatic rebuild on
+  restart. To auto-detect them on restart instead, set
+  `TENACIOUSLOAD_WATCH_INPUT=1`. Only do this if your input folder is fairly
+  static: on a busy input folder (e.g. a video workflow that adds clips
+  constantly) the input dir changes on nearly every restart, which would
+  invalidate the cache and force a slow rebuild each time — defeating the point.
 
 ## Installing / updating other custom nodes
 This pack is a quiet neighbour:

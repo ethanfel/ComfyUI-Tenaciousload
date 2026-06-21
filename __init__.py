@@ -362,15 +362,19 @@ def _current_node_signature():
     except Exception as e:  # pragma: no cover
         log.warning("Tenaciousload: custom_nodes code hash failed: %s", e)
         code = ""
-    # input-dir mtime: LoadImage etc. list the input folder (non-recursively) in
-    # their INPUT_TYPES, so it rides along in object_info. The dir's own mtime
-    # changes when files are added/removed there, so a restart picks them up.
-    # (Cheap: one stat. Model folders are on a slow mount + nested, so they are
-    # NOT fingerprinted here — use a refresh button for new models.)
-    try:
-        inp = str(os.path.getmtime(folder_paths.get_input_directory()))
-    except Exception:
-        inp = ""
+    # Optionally fold in the input-dir mtime so new files in the input folder
+    # show up after a restart. OFF BY DEFAULT: on a high-churn input folder
+    # (e.g. a video workflow that constantly adds clips) it changes on nearly
+    # every restart, invalidating the cache and forcing a slow rebuild — which
+    # defeats the whole point. Enable with TENACIOUSLOAD_WATCH_INPUT=1 only if
+    # your input folder is fairly static. Otherwise use a refresh button for new
+    # input files, same as for new models.
+    inp = ""
+    if os.environ.get("TENACIOUSLOAD_WATCH_INPUT", "").strip().lower() in ("1", "true", "yes", "on"):
+        try:
+            inp = str(os.path.getmtime(folder_paths.get_input_directory()))
+        except Exception:
+            inp = ""
     return f"{len(keys)}:{h.hexdigest()}:{code}:{inp}"
 
 
