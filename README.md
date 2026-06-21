@@ -41,7 +41,7 @@ from the **`Extensions`** menu (and the command palette):
 | Mode | What it does | Speed |
 |------|--------------|-------|
 | ⚡ **Quick refresh** | Re-walks only the folders whose timestamp **changed** since the last scan; reuses the cache for the rest. Catches new / removed / renamed files. | Fast on local disks; **~2× faster** on a slow network mount (it still has to stat every folder to find which changed). |
-| 🔄 **Full refresh** | Clears ComfyUI's folder cache and re-walks **everything**. Catches moves/deletes anywhere. | Slowest (the original behaviour). |
+| 🔄 **Full refresh** | Clears ComfyUI's folder cache and re-walks **everything**, ignoring timestamps. Catches moves/deletes anywhere. **Use this for files you *just* added.** | Slowest (the original behaviour). |
 | ➕ **Register new file…** | You give it the path(s) of the file(s) you just added; it appends them to the cache with **no folder walk**. | Instant disk-wise — only the `object_info` rebuild remains. |
 
 Also available:
@@ -54,6 +54,12 @@ Also available:
 > The **first** Quick refresh after install builds a folder index (one full walk),
 > so it's as slow as a Full refresh that one time; every Quick refresh after that
 > is incremental. The index is saved to `./cache/scan_snapshot.json`.
+
+> **Network mounts (CIFS/SMB/NFS):** Quick refresh detects changes by directory
+> timestamp, which network filesystems can report with a delay or coarse
+> resolution (e.g. a `cache=loose` CIFS mount), so it may *occasionally miss a
+> brand-new file*. If a just-added model doesn't show up after a Quick refresh,
+> use **Full refresh** — it re-walks everything and doesn't rely on timestamps.
 
 Whichever mode you pick, the button shows a "refreshing…" toast and normal loads
 stay instant.

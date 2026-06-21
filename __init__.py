@@ -415,6 +415,12 @@ _node_info_resolved = False
 # Live build progress, surfaced at /tenaciousload/status for the loading overlay.
 _build_state = {"building": False, "started": 0.0, "done": 0, "total": 0, "last_ms": 0, "last_bytes": 0}
 
+# Single-flight: only ONE object_info build may run at a time. ComfyUI's
+# cache_helper is a global, so two concurrent builds (e.g. a manual refresh
+# fired during a rebuild) corrupt it and the second build re-walks the network
+# mount per-node = a hang. Concurrent requests wait on this and serve the result.
+_build_lock = asyncio.Lock()
+
 
 def _resolve_node_info_fn():
     """Pull ComfyUI's own `node_info` closure off the /object_info route, so the
@@ -514,21 +520,27 @@ async def _object_info_cache_mw(request, handler):
         return _serve_cached(request)
 
     # MISS / refresh: build in a worker thread so a slow folder-walk does not
-    # freeze the event loop. Falls back to the normal in-loop handler.
-    raw = await _build_object_info_off_loop()
-    if raw is not None:
-        _store(raw)
-        return _serve_cached(request)
-
-    resp = await handler(request)
-    try:
-        body = getattr(resp, "body", None)
-        if resp.status == 200 and isinstance(body, (bytes, bytearray)) and len(body) > 0:
-            _store(bytes(body))
+    # freeze the event loop. Single-flight via _build_lock — a concurrent
+    # request (e.g. a manual refresh during a rebuild) waits here and then serves
+    # the fresh result instead of starting a second, conflicting build.
+    async with _build_lock:
+        # another request may have finished the build while we waited for the lock
+        if "nocache" not in request.query and _mem["raw"] is not None:
             return _serve_cached(request)
-    except Exception as e:  # pragma: no cover
-        log.warning("Tenaciousload: caching skipped: %s", e)
-    return resp
+        raw = await _build_object_info_off_loop()
+        if raw is not None:
+            _store(raw)
+            return _serve_cached(request)
+        # off-loop build unavailable -> in-loop handler (still under the lock)
+        resp = await handler(request)
+        try:
+            body = getattr(resp, "body", None)
+            if resp.status == 200 and isinstance(body, (bytes, bytearray)) and len(body) > 0:
+                _store(bytes(body))
+                return _serve_cached(request)
+        except Exception as e:  # pragma: no cover
+            log.warning("Tenaciousload: caching skipped: %s", e)
+        return resp
 
 
 def _install_middleware():
