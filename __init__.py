@@ -412,6 +412,9 @@ def _check_node_signature():
 _node_info_fn = None
 _node_info_resolved = False
 
+# Live build progress, surfaced at /tenaciousload/status for the loading overlay.
+_build_state = {"building": False, "started": 0.0, "done": 0, "total": 0, "last_ms": 0, "last_bytes": 0}
+
 
 def _resolve_node_info_fn():
     """Pull ComfyUI's own `node_info` closure off the /object_info route, so the
@@ -441,14 +444,23 @@ def _resolve_node_info_fn():
 def _build_object_info_bytes():
     """Replicate ComfyUI's object_info build. Runs in a worker thread."""
     import nodes
+    keys = list(nodes.NODE_CLASS_MAPPINGS.keys())
+    _build_state.update(building=True, started=time.time(), done=0, total=len(keys))
     out = {}
-    with folder_paths.cache_helper:
-        for x in list(nodes.NODE_CLASS_MAPPINGS.keys()):
-            try:
-                out[x] = _node_info_fn(x)
-            except Exception:  # pragma: no cover
-                log.error("Tenaciousload: node_info failed for '%s'", x, exc_info=True)
-    return json.dumps(out).encode("utf-8")
+    try:
+        with folder_paths.cache_helper:
+            for i, x in enumerate(keys):
+                try:
+                    out[x] = _node_info_fn(x)
+                except Exception:  # pragma: no cover
+                    log.error("Tenaciousload: node_info failed for '%s'", x, exc_info=True)
+                _build_state["done"] = i + 1
+        raw = json.dumps(out).encode("utf-8")
+        _build_state["last_bytes"] = len(raw)
+        return raw
+    finally:
+        _build_state["building"] = False
+        _build_state["last_ms"] = int((time.time() - _build_state["started"]) * 1000)
 
 
 async def _build_object_info_off_loop():
@@ -533,6 +545,22 @@ _install_middleware()
 # --------------------------------------------------------------------------- #
 #  Refresh API
 # --------------------------------------------------------------------------- #
+@PromptServer.instance.routes.get("/tenaciousload/status")
+async def _status(request):
+    st = {
+        "building": _build_state["building"],
+        "done": _build_state["done"],
+        "total": _build_state["total"],
+        "last_ms": _build_state["last_ms"],
+        "cached": _mem["raw"] is not None,
+        "cache_bytes": len(_mem["raw"]) if _mem["raw"] else 0,
+        "gz_bytes": len(_mem["gz"]) if _mem["gz"] else 0,
+    }
+    if _build_state["building"] and _build_state["started"]:
+        st["elapsed"] = round(time.time() - _build_state["started"], 1)
+    return web.json_response(st)
+
+
 @PromptServer.instance.routes.post("/tenaciousload/refresh")
 async def _refresh(request):
     try:

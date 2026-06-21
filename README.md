@@ -103,6 +103,10 @@ python main.py --listen --port 8188 --enable-compress-response-body
   negligible compared to the bytes saved over the network.
 
 ## Notes
+- **Loading status:** instead of ComfyUI's silent "Comfy" splash, a small status
+  line shows whether it's *serving from cache* or *building* (with node count +
+  elapsed time), so a long rebuild isn't a black screen with no feedback. It
+  removes itself once the app is ready. Status is also at `GET /tenaciousload/status`.
 - The disk cache lives in `./cache/` (git-ignored). Delete it, or use the refresh
   button, to force a rebuild.
 - An nginx reverse proxy can cache `object_info` at the HTTP layer too, but this
